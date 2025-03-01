@@ -1,13 +1,13 @@
 import streamlit as st
 
-st.set_page_config(page_title="AI Network Monitor & Chatbot", layout="wide")
+st.set_page_config(page_title="Automated Root Cause Analysis", layout="wide")
 
 
 from components.network_weather import display_network_weather
 from components.chatbot import display_chatbot
 
 
-st.title("AI Network Monitoring & Voice Chatbot")
+st.title("Automated Root Cause Analysis")
 
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to:", ["Network Monitor & Weather", "Netbot"])
