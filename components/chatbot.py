@@ -3,11 +3,8 @@ import streamlit as st
 import requests
 import tempfile
 import soundfile as sf
-from utils.text_to_speech import text_to_speech
 from streamlit_mic_recorder import mic_recorder
-from pydub import AudioSegment
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-import torch
 import librosa
 
 
