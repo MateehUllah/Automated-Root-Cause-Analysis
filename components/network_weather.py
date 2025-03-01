@@ -14,6 +14,16 @@ load_dotenv()
 
 @st.cache_resource
 def load_model():
+    """
+    Loads a pre-trained machine learning model from a pickle file.
+
+    This function caches the loaded model to optimize performance in a Streamlit app,
+    preventing reloading the model on every script rerun.
+
+    Returns:
+        object: The machine learning model loaded from the pickle file.
+    """
+
     with open("models/network_model.pkl", "rb") as f:
         return pickle.load(f)
 
@@ -23,7 +33,16 @@ model = load_model()
 API_KEY = os.getenv("OPEN_WEATHER_API")
 
 def get_weather_data(lat=37.7749, lon=-122.4194):
-    """Fetch real-time weather data from OpenWeather API."""
+    """
+    Fetches current weather data for a given location.
+
+    Args:
+        lat (float, optional): Latitude of the location. Defaults to 37.7749.
+        lon (float, optional): Longitude of the location. Defaults to -122.4194.
+
+    Returns:
+        dict: A dictionary containing the location name, temperature (in Celsius), humidity percentage, and weather condition description.
+    """
     url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
     response = requests.get(url).json()
 
@@ -39,9 +58,18 @@ def get_weather_data(lat=37.7749, lon=-122.4194):
 
 
 def display_network_weather():
-    st.subheader("📡 AI Network Monitoring & Weather")
+    """
+    Displays a Streamlit app for AI Network Monitoring & Weather.
 
-    st.sidebar.header("📊 Input Network Data")
+    The app takes input network data (packet loss, latency, jitter, bandwidth usage) and a location for weather data.
+    It uses a pre-trained machine learning model to predict the risk of network failure based on the input data.
+    If a high risk of failure is predicted, it provides recommendations to mitigate the failure and allows the user to send an email alert.
+
+    The app uses the OpenWeatherMap API to fetch current weather data for a given location.
+    """
+    st.subheader("AI Network Monitoring & Weather")
+
+    st.sidebar.header("Input Network Data")
     packet_loss = st.sidebar.slider("Packet Loss (%)", 0, 100, 5)
     latency = st.sidebar.slider("Latency (ms)", 0, 100, 5)
     jitter = st.sidebar.slider("Jitter (ms)", 0, 100, 5)
@@ -81,7 +109,7 @@ def display_network_weather():
                 st.write(recommendations)
                 if st.button("📩 Send Email Alert"):
                     send_email_alert("Network failure detected",f"⚠️ Network failure detected! Restart router, check hardware, reduce bandwidth.\n\nRecommendations:\n{recommendations}")
-                    st.success("✅ Email alert sent successfully!")
+                    st.success("Email alert sent successfully!")
 
             else:
-                st.success("✅ Network is Stable")
+                st.success("Network is Stable")
