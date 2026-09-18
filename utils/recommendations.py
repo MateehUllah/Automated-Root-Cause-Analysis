@@ -1,8 +1,17 @@
 import os
+
 import requests
 
-API_TOKEN = os.environ.get('HUGGINGFACEHUB_API_TOKEN')
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+API_TOKEN = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+API_URL = (
+    "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+)
+REQUEST_TIMEOUT = (5, 30)
+UNAVAILABLE_MESSAGE = (
+    "AI recommendations are unavailable. Check the inference service configuration "
+    "or try again later."
+)
+
 
 def _clean_response(generated_text, prompt):
     """
@@ -16,8 +25,9 @@ def _clean_response(generated_text, prompt):
         str: A cleaned version of the generated text with the prompt and special tokens removed.
     """
     cleaned = generated_text.replace(prompt, "").strip()
-    cleaned = cleaned.replace("<s>", "").replace("</s>", "").strip()   
+    cleaned = cleaned.replace("<s>", "").replace("</s>", "").strip()
     return "\n".join([line.strip() for line in cleaned.split("\n") if line.strip()])
+
 
 def generate_network_failure_recommendations(network_data, weather_data):
     """
@@ -34,22 +44,23 @@ def generate_network_failure_recommendations(network_data, weather_data):
             - Humidity (float): Humidity percentage.
             - Condition (str): Weather condition (e.g., Rain, Storm, Clear).
     Returns:
-        str: A string containing three specific recommendations to mitigate network failure risks.
+        str: Generated recommendations, or an availability message when the
+            inference request fails or returns an unusable response.
     """
 
     prompt = f"""
     Analyze the following network and weather data to assess potential network failures:
 
     - Network Metrics:
-      - Packet Loss: {network_data['Packet_Loss']}%
-      - Latency: {network_data['Latency']} ms
-      - Jitter: {network_data['Jitter']} ms
-      - Bandwidth Usage: {network_data['Bandwidth_Usage']}%
+      - Packet Loss: {network_data["Packet_Loss"]}%
+      - Latency: {network_data["Latency"]} ms
+      - Jitter: {network_data["Jitter"]} ms
+      - Bandwidth Usage: {network_data["Bandwidth_Usage"]}%
 
     - Weather Conditions:
-      - Temperature: {weather_data['temperature']}°C
-      - Humidity: {weather_data['humidity']}%
-      - Condition: {weather_data['condition']}
+      - Temperature: {weather_data["temperature"]}°C
+      - Humidity: {weather_data["humidity"]}%
+      - Condition: {weather_data["condition"]}
 
     Given this data, provide **three specific recommendations** to prevent or mitigate network failures. 
     Format the recommendations as a **numbered list** with no extra commentary.
@@ -61,10 +72,23 @@ def generate_network_failure_recommendations(network_data, weather_data):
         "parameters": {
             "max_new_tokens": 300,
             "temperature": 0.7,
-            "return_full_text": False 
-        }
+            "return_full_text": False,
+        },
     }
 
-    response = requests.post(API_URL, headers=headers, json=payload)
-    generated_text = response.json()[0]['generated_text']
-    return _clean_response(generated_text, prompt)
+    try:
+        response = requests.post(
+            API_URL, headers=headers, json=payload, timeout=REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+        result = response.json()
+    except (requests.RequestException, ValueError):
+        # Do not display provider errors: they may contain sensitive request data.
+        return UNAVAILABLE_MESSAGE
+
+    if not isinstance(result, list) or not result or not isinstance(result[0], dict):
+        return UNAVAILABLE_MESSAGE
+    generated_text = result[0].get("generated_text")
+    if not isinstance(generated_text, str):
+        return UNAVAILABLE_MESSAGE
+    return _clean_response(generated_text, prompt) or UNAVAILABLE_MESSAGE
